@@ -1,0 +1,31 @@
+# Dependency directories
+node_modules/
+frontend/node_modules/
+
+# Production builds
+dist/
+frontend/dist/
+build/
+
+# Go binaries
+backend/bin/
+backend/main
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Environment variables (CRITICAL: NEVER COMMIT SECRETS)
+.env
+.env.local
+backend/.env
+frontend/.env
+
+# IDE & OS files
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
