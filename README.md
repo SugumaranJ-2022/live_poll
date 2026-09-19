@@ -6,19 +6,6 @@ LivePoll allows creators to launch interactive live polls, share instant links o
 
 ---
 
-## 🔑 Demo Account Credentials
-
-For quick evaluation and testing of pre-populated data:
-
-| Field | Credential Details |
-| :--- | :--- |
-| **Email** | `sugumaran@gmail.com` |
-| **Password** | `Sara@2022` |
-| **Full Name** | `Sugumaran J` |
-| **Seeded Data** | **10 Active Polls** with **1,480+ total votes cast** |
-
----
-
 ## 🌟 Key Features & Implementation Highlights
 
 ### ⚡ 1. Real-Time Engine (Zero-Latency Voting)
@@ -227,7 +214,9 @@ App Access Links:
 * **Strict CORS Rules**: Dynamic origin matching for secure cross-origin requests (`PATCH`, `POST`, `OPTIONS`, `GET`, `DELETE`).
 * **Route Ordering Precedence**: Gin router static route handlers (`/polls/stats`) prioritized before wildcard routes (`/polls/:id`).
 * **Optimized Production Bundling**: Vite client builds in `< 500ms` with zero lint errors.
+
 ---
+
 
 ## 📄 License
 
