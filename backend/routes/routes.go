@@ -25,21 +25,24 @@ func SetupRoutes(r *gin.Engine) {
 			}
 		}
 
-		// Poll Public Routes
+		// Poll Routes
 		polls := api.Group("/polls")
 		{
-			polls.GET("/:id", controllers.GetPollByID)
-			polls.POST("/:id/vote", controllers.VotePoll)
-			polls.GET("/:id/stream", controllers.StreamPollUpdates)
-
-			// Protected Poll Management Routes
+			// Protected Poll Management Routes (Declare static routes first to prevent :id wildcard parameter collision)
 			protectedPolls := polls.Group("")
 			protectedPolls.Use(middleware.AuthMiddleware())
 			{
 				protectedPolls.POST("", controllers.CreatePoll)
 				protectedPolls.GET("", controllers.GetUserPolls)
+				protectedPolls.GET("/stats", controllers.GetDashboardStats)
+				protectedPolls.PATCH("/:id/toggle", controllers.TogglePollStatus)
 				protectedPolls.DELETE("/:id", controllers.DeletePoll)
 			}
+
+			// Public Parametrized Routes
+			polls.GET("/:id", controllers.GetPollByID)
+			polls.POST("/:id/vote", controllers.VotePoll)
+			polls.GET("/:id/stream", controllers.StreamPollUpdates)
 		}
 	}
 }

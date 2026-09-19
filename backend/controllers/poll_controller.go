@@ -11,6 +11,7 @@ import (
 
 	"backend/config"
 	"backend/models"
+	"backend/utils"
 
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/v2/bson"
@@ -123,6 +124,11 @@ func GetUserPolls(c *gin.Context) {
 // GetPollByID retrieves a public poll by its ID
 func GetPollByID(c *gin.Context) {
 	pollIDStr := c.Param("id")
+	if pollIDStr == "stats" {
+		GetDashboardStats(c)
+		return
+	}
+
 	pollObjID, err := bson.ObjectIDFromHex(pollIDStr)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid poll ID format"})
@@ -284,10 +290,16 @@ func VotePoll(c *gin.Context) {
 
 	// Publish Realtime Event to Redis Pub/Sub channel poll:<pollId>:updates
 	if config.RedisClient != nil {
+		// Increment fast Redis counter in Hash map
+		redisCountKey := fmt.Sprintf("poll:%s:counts", pollIDStr)
+		config.RedisClient.HIncrBy(context.Background(), redisCountKey, input.OptionID, 1)
+
 		event := models.VoteEvent{
+			Type:     "vote",
 			PollID:   pollIDStr,
 			OptionID: input.OptionID,
 			Options:  updatedPoll.Options,
+			IsActive: updatedPoll.IsActive,
 		}
 
 		eventBytes, err := json.Marshal(event)
@@ -303,10 +315,159 @@ func VotePoll(c *gin.Context) {
 	})
 }
 
-// StreamPollUpdates handles Server-Sent Events (SSE) subscriptions via Redis Pub/Sub
+// TogglePollStatus toggles the active/closed state of a poll owned by user
+func TogglePollStatus(c *gin.Context) {
+	pollIDStr := c.Param("id")
+	pollObjID, err := bson.ObjectIDFromHex(pollIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid poll ID format"})
+		return
+	}
+
+	userIDStr := c.GetString("userID")
+	userObjID, err := bson.ObjectIDFromHex(userIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		return
+	}
+
+	var input models.TogglePollInput
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Validation error: " + err.Error()})
+		return
+	}
+
+	if config.MongoDB == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database connection is unavailable"})
+		return
+	}
+
+	collection := config.MongoDB.Collection("polls")
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	var poll models.Poll
+	err = collection.FindOne(ctx, bson.M{"_id": pollObjID}).Decode(&poll)
+	if err == mongo.ErrNoDocuments {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Poll not found"})
+		return
+	}
+
+	if poll.CreatedBy != userObjID {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Forbidden: You can only update your own polls"})
+		return
+	}
+
+	update := bson.M{
+		"$set": bson.M{
+			"isActive":  input.IsActive,
+			"updatedAt": time.Now(),
+		},
+	}
+
+	_, err = collection.UpdateOne(ctx, bson.M{"_id": pollObjID}, update)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update poll status"})
+		return
+	}
+
+	poll.IsActive = input.IsActive
+
+	// Publish status change event to Redis Pub/Sub
+	if config.RedisClient != nil {
+		event := models.VoteEvent{
+			Type:     "status",
+			PollID:   pollIDStr,
+			IsActive: input.IsActive,
+			Options:  poll.Options,
+		}
+		eventBytes, err := json.Marshal(event)
+		if err == nil {
+			channel := fmt.Sprintf("poll:%s:updates", pollIDStr)
+			config.RedisClient.Publish(context.Background(), channel, string(eventBytes))
+		}
+	}
+
+	c.JSON(http.StatusOK, poll)
+}
+
+// GetDashboardStats computes overview metric statistics for logged-in user
+func GetDashboardStats(c *gin.Context) {
+	userIDStr := c.GetString("userID")
+	if userIDStr == "" {
+		authHeader := c.GetHeader("Authorization")
+		if strings.HasPrefix(authHeader, "Bearer ") {
+			tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
+			claims, err := utils.ValidateToken(tokenStr)
+			if err == nil && claims != nil {
+				userIDStr = claims.UserID
+			}
+		}
+	}
+
+	userObjID, err := bson.ObjectIDFromHex(userIDStr)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized: Please log in to view dashboard statistics"})
+		return
+	}
+
+	if config.MongoDB == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database connection is unavailable"})
+		return
+	}
+
+	collection := config.MongoDB.Collection("polls")
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	cursor, err := collection.Find(ctx, bson.M{"createdBy": userObjID})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database query error"})
+		return
+	}
+	defer cursor.Close(ctx)
+
+	var polls []models.Poll
+	if err = cursor.All(ctx, &polls); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse polls"})
+		return
+	}
+
+	var totalPolls int64 = int64(len(polls))
+	var totalVotes int64 = 0
+	var activePolls int64 = 0
+	var topQuestion string = "No polls created yet"
+	var topVotes int64 = 0
+
+	for _, poll := range polls {
+		if poll.IsActive {
+			activePolls++
+		}
+		var pollVoteSum int64 = 0
+		for _, opt := range poll.Options {
+			pollVoteSum += opt.Votes
+		}
+		totalVotes += pollVoteSum
+		if pollVoteSum >= topVotes && pollVoteSum > 0 {
+			topVotes = pollVoteSum
+			topQuestion = poll.Question
+		}
+	}
+
+	c.JSON(http.StatusOK, models.PollStatsResponse{
+		TotalPolls:  totalPolls,
+		TotalVotes:  totalVotes,
+		ActivePolls: activePolls,
+		TopQuestion: topQuestion,
+		TopVotes:    topVotes,
+	})
+}
+
+// StreamPollUpdates handles Server-Sent Events (SSE) subscriptions via Redis Pub/Sub with presence tracking
 func StreamPollUpdates(c *gin.Context) {
 	pollIDStr := c.Param("id")
 	channel := fmt.Sprintf("poll:%s:updates", pollIDStr)
+	presenceKey := fmt.Sprintf("poll:%s:viewers", pollIDStr)
 
 	// Set headers for Server-Sent Events
 	c.Writer.Header().Set("Content-Type", "text/event-stream")
@@ -319,8 +480,39 @@ func StreamPollUpdates(c *gin.Context) {
 		return
 	}
 
+	// Increment live presence viewer count in Redis
+	viewersVal, _ := config.RedisClient.Incr(context.Background(), presenceKey).Result()
+
+	// Broadcast updated presence to channel
+	presenceEvent := models.VoteEvent{
+		Type:    "presence",
+		PollID:  pollIDStr,
+		Viewers: int(viewersVal),
+	}
+	if pBytes, err := json.Marshal(presenceEvent); err == nil {
+		config.RedisClient.Publish(context.Background(), channel, string(pBytes))
+	}
+
 	pubsub := config.RedisClient.Subscribe(context.Background(), channel)
-	defer pubsub.Close()
+	defer func() {
+		pubsub.Close()
+		// Decrement live presence viewer count when connection terminates
+		if config.RedisClient != nil {
+			vVal, _ := config.RedisClient.Decr(context.Background(), presenceKey).Result()
+			if vVal < 0 {
+				config.RedisClient.Set(context.Background(), presenceKey, 0, 0)
+				vVal = 0
+			}
+			pEvent := models.VoteEvent{
+				Type:    "presence",
+				PollID:  pollIDStr,
+				Viewers: int(vVal),
+			}
+			if pBytes, err := json.Marshal(pEvent); err == nil {
+				config.RedisClient.Publish(context.Background(), channel, string(pBytes))
+			}
+		}
+	}()
 
 	ch := pubsub.Channel()
 
@@ -337,3 +529,4 @@ func StreamPollUpdates(c *gin.Context) {
 		}
 	})
 }
+

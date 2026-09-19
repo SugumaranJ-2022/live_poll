@@ -30,6 +30,25 @@ export default function CreatePollPage() {
     }
   };
 
+  const applyTemplate = (templateType) => {
+    switch (templateType) {
+      case 'yes_no':
+        setOptions(['Yes', 'No', 'Maybe']);
+        break;
+      case 'options_abcd':
+        setOptions(['Option A', 'Option B', 'Option C', 'Option D']);
+        break;
+      case 'rating_5':
+        setOptions(['⭐ 1 Star (Poor)', '⭐⭐ 2 Stars', '⭐⭐⭐ 3 Stars', '⭐⭐⭐⭐ 4 Stars', '⭐⭐⭐⭐⭐ 5 Stars (Excellent)']);
+        break;
+      case 'agree_disagree':
+        setOptions(['Strongly Agree', 'Agree', 'Neutral', 'Disagree', 'Strongly Disagree']);
+        break;
+      default:
+        break;
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -63,16 +82,21 @@ export default function CreatePollPage() {
 
   return (
     <div className="page-container">
+      <div className="page-top-actions">
+        <button onClick={() => navigate('/dashboard')} className="btn-back-link">
+          ← Go Back to Dashboard
+        </button>
+      </div>
       <div className="form-card">
         <h2>📊 Create a New Live Poll</h2>
-        <p className="form-subtitle">Add a question and options. Anyone with the link will be able to vote live!</p>
+        <p className="form-subtitle">Customize your question and options. Audience members can vote in real-time instantly!</p>
 
         {error && <div className="alert alert-error">{error}</div>}
 
         {createdPoll ? (
           <div className="success-card">
             <div className="success-icon">🎉</div>
-            <h3>Poll Created Successfully!</h3>
+            <h3>Poll Published Successfully!</h3>
             <p>Share this live poll link with your audience:</p>
 
             <div className="share-link-box">
@@ -84,7 +108,7 @@ export default function CreatePollPage() {
 
             <div className="success-actions">
               <a href={shareableUrl} target="_blank" rel="noreferrer" className="btn-primary-md">
-                🔗 Open Poll Page
+                🔗 Open Live Poll Page
               </a>
               <Link to="/dashboard" className="btn-outline-md">
                 📊 Go to Dashboard
@@ -93,6 +117,23 @@ export default function CreatePollPage() {
           </div>
         ) : (
           <form onSubmit={handleSubmit}>
+            {/* Quick Templates Bar */}
+            <div className="template-presets-bar">
+              <span className="template-label">⚡ Quick Templates:</span>
+              <button type="button" onClick={() => applyTemplate('yes_no')} className="btn-template">
+                Yes / No / Maybe
+              </button>
+              <button type="button" onClick={() => applyTemplate('options_abcd')} className="btn-template">
+                Option A/B/C/D
+              </button>
+              <button type="button" onClick={() => applyTemplate('rating_5')} className="btn-template">
+                1-5 Star Rating
+              </button>
+              <button type="button" onClick={() => applyTemplate('agree_disagree')} className="btn-template">
+                Agree / Disagree
+              </button>
+            </div>
+
             <div className="form-group">
               <label>Poll Question</label>
               <input
@@ -101,7 +142,7 @@ export default function CreatePollPage() {
                 minLength={5}
                 value={question}
                 onChange={(e) => setQuestion(e.target.value)}
-                placeholder="e.g. Which frontend framework do you prefer?"
+                placeholder="e.g. Which technology stack is best for real-time web applications?"
               />
             </div>
 
@@ -132,13 +173,13 @@ export default function CreatePollPage() {
 
             {options.length < 10 && (
               <button type="button" onClick={addOption} className="btn-secondary-sm add-option-btn">
-                + Add Option
+                + Add Another Option
               </button>
             )}
 
             <div className="form-submit-row">
               <button type="submit" className="btn-primary-lg btn-block" disabled={loading}>
-                {loading ? 'Publishing Poll...' : '🚀 Create & Publish Poll'}
+                {loading ? 'Publishing Live Poll...' : '🚀 Create & Publish Poll'}
               </button>
             </div>
           </form>

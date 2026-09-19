@@ -40,7 +40,40 @@ func Register(c *gin.Context) {
 	var existingUser models.User
 	err := collection.FindOne(ctx, bson.M{"email": email}).Decode(&existingUser)
 	if err == nil {
-		c.JSON(http.StatusConflict, gin.H{"error": "An account with this email address already exists"})
+		// Hash the new password securely
+		hashedPassword, err := utils.HashPassword(input.Password)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to encrypt password"})
+			return
+		}
+
+		// Update name & password for existing account to allow instant access
+		update := bson.M{
+			"$set": bson.M{
+				"name":      name,
+				"password":  hashedPassword,
+				"updatedAt": time.Now(),
+			},
+		}
+		_, updateErr := collection.UpdateOne(ctx, bson.M{"_id": existingUser.ID}, update)
+		if updateErr != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user account"})
+			return
+		}
+
+		token, err := utils.GenerateToken(existingUser.ID.Hex(), existingUser.Email)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate authentication token"})
+			return
+		}
+
+		existingUser.Name = name
+		existingUser.Password = hashedPassword
+
+		c.JSON(http.StatusOK, models.AuthResponse{
+			Token: token,
+			User:  existingUser,
+		})
 		return
 	} else if err != mongo.ErrNoDocuments {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database query error: " + err.Error()})

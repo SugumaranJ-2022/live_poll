@@ -43,7 +43,25 @@ type VoteInput struct {
 
 // VoteEvent defines payload broadcasted over Redis Pub/Sub
 type VoteEvent struct {
+	Type     string   `json:"type"` // "vote", "status", "presence"
 	PollID   string   `json:"pollId"`
-	OptionID string   `json:"optionId"`
-	Options  []Option `json:"options"`
+	OptionID string   `json:"optionId,omitempty"`
+	Options  []Option `json:"options,omitempty"`
+	IsActive bool     `json:"isActive,omitempty"`
+	Viewers  int      `json:"viewers,omitempty"`
 }
+
+// TogglePollInput defines payload for toggling active state of poll
+type TogglePollInput struct {
+	IsActive bool `json:"isActive"`
+}
+
+// PollStatsResponse defines response for user dashboard metrics
+type PollStatsResponse struct {
+	TotalPolls  int64  `json:"totalPolls"`
+	TotalVotes  int64  `json:"totalVotes"`
+	ActivePolls int64  `json:"activePolls"`
+	TopQuestion string `json:"topQuestion"`
+	TopVotes    int64  `json:"topVotes"`
+}
+

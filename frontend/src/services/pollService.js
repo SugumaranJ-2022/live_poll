@@ -35,4 +35,17 @@ export const pollService = {
       method: 'DELETE',
     });
   },
+
+  async togglePollStatus(pollId, isActive) {
+    return await fetchAPI(`/polls/${pollId}/toggle`, {
+      method: 'PATCH',
+      body: JSON.stringify({ isActive }),
+    });
+  },
+
+  async getDashboardStats() {
+    return await fetchAPI('/polls/stats', {
+      method: 'GET',
+    });
+  },
 };

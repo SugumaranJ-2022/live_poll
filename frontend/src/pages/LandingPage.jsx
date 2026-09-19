@@ -7,15 +7,14 @@ export default function LandingPage() {
   return (
     <div className="page-container landing-hero">
       <div className="hero-content">
-        <span className="badge-pill">⚡ Powered by Go + Redis + MongoDB</span>
-        <h1>Create & Share Real-Time Live Polls Instantly</h1>
+        <h1>Create, Vote & Analyze Live Polls Instantly</h1>
         <p className="hero-subtitle">
-          Watch audience votes stream live to your screen without refreshing the page. Built for real-time engagement.
+          Collect audience feedback in real-time with zero latency, interactive data visualization charts, and instant QR code sharing.
         </p>
 
         <div className="hero-actions">
           {user ? (
-            <Link to="/create-poll" className="btn-primary-lg">🚀 Create a Live Poll</Link>
+            <Link to="/dashboard" className="btn-primary-lg">📊 Go to Dashboard</Link>
           ) : (
             <>
               <Link to="/register" className="btn-primary-lg">Get Started Free</Link>
@@ -28,20 +27,26 @@ export default function LandingPage() {
       <div className="features-grid">
         <div className="feature-card">
           <div className="feature-icon">⚡</div>
-          <h3>True Redis Realtime</h3>
-          <p>Redis Pub/Sub streams vote results directly to connected browser clients with zero latency or page refresh.</p>
+          <h3>Zero-Latency Live Voting</h3>
+          <p>Audience votes stream live instantly to all connected screens with automatic real-time updates.</p>
         </div>
 
         <div className="feature-card">
-          <div className="feature-icon">🛡️</div>
-          <h3>Secure Authentication</h3>
-          <p>JWT authentication and bcrypt password hashing ensure only authorized creators can manage their polls.</p>
+          <div className="feature-icon">📊</div>
+          <h3>Interactive Data Charts</h3>
+          <p>Visualize audience responses with real-time bar graphs, total vote counters, and leading option badges.</p>
         </div>
 
         <div className="feature-card">
-          <div className="feature-icon">💾</div>
-          <h3>MongoDB Atomic Persistence</h3>
-          <p>Votes are stored permanently and updated atomically using MongoDB's $inc operator to eliminate race conditions.</p>
+          <div className="feature-icon">🔒</div>
+          <h3>Poll Lock & Access Controls</h3>
+          <p>Creators can easily toggle polls active or closed anytime to control when voting is open.</p>
+        </div>
+
+        <div className="feature-card">
+          <div className="feature-icon">📱</div>
+          <h3>Instant QR Code Sharing</h3>
+          <p>Share direct poll links or generated QR codes for seamless mobile audience participation.</p>
         </div>
       </div>
     </div>

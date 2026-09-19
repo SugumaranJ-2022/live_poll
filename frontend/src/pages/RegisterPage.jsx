@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import ThemeToggle from '../components/ThemeToggle';
 
 export default function RegisterPage() {
   const [name, setName] = useState('');
@@ -30,7 +31,15 @@ export default function RegisterPage() {
   return (
     <div className="auth-container">
       <div className="auth-card">
-        <h2>Create an Account</h2>
+        <div className="auth-card-top-bar">
+          <div className="auth-title-group">
+            <button onClick={() => navigate('/')} className="btn-back-link" title="Go back to Home">
+              ← Go Back
+            </button>
+            <h2>Create an Account</h2>
+          </div>
+          <ThemeToggle className="auth-theme-btn" />
+        </div>
         <p className="auth-subtitle">Start creating live polls in seconds</p>
 
         {error && <div className="alert alert-error">{error}</div>}
@@ -70,7 +79,7 @@ export default function RegisterPage() {
             />
           </div>
 
-          <button type="submit" className="btn-block" disabled={loading}>
+          <button type="submit" className="btn-primary-lg btn-block" disabled={loading}>
             {loading ? 'Creating Account...' : 'Register'}
           </button>
         </form>

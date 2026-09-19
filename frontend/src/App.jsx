@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+import { ThemeProvider } from './context/ThemeContext';
 import Navbar from './components/Navbar';
 import ProtectedRoute from './components/ProtectedRoute';
 
@@ -14,41 +15,43 @@ import NotFoundPage from './pages/NotFoundPage';
 export default function App() {
   return (
     <Router>
-      <AuthProvider>
-        <div className="app-layout">
-          <Navbar />
-          <main>
-            <Routes>
-              {/* Public Routes */}
-              <Route path="/" element={<LandingPage />} />
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/register" element={<RegisterPage />} />
-              <Route path="/poll/:pollId" element={<PollPage />} />
+      <ThemeProvider>
+        <AuthProvider>
+          <div className="app-layout">
+            <Navbar />
+            <main>
+              <Routes>
+                {/* Public Routes */}
+                <Route path="/" element={<LandingPage />} />
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/register" element={<RegisterPage />} />
+                <Route path="/poll/:pollId" element={<PollPage />} />
 
-              {/* Protected Routes */}
-              <Route
-                path="/dashboard"
-                element={
-                  <ProtectedRoute>
-                    <DashboardPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/create-poll"
-                element={
-                  <ProtectedRoute>
-                    <CreatePollPage />
-                  </ProtectedRoute>
-                }
-              />
+                {/* Protected Routes */}
+                <Route
+                  path="/dashboard"
+                  element={
+                    <ProtectedRoute>
+                      <DashboardPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/create-poll"
+                  element={
+                    <ProtectedRoute>
+                      <CreatePollPage />
+                    </ProtectedRoute>
+                  }
+                />
 
-              {/* 404 Catch-all Route */}
-              <Route path="*" element={<NotFoundPage />} />
-            </Routes>
-          </main>
-        </div>
-      </AuthProvider>
+                {/* 404 Catch-all Route */}
+                <Route path="*" element={<NotFoundPage />} />
+              </Routes>
+            </main>
+          </div>
+        </AuthProvider>
+      </ThemeProvider>
     </Router>
   );
 }
