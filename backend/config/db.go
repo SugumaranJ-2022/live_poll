@@ -2,6 +2,7 @@ package config
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"log"
 	"os"
@@ -28,10 +29,18 @@ func ConnectDB() (*mongo.Database, error) {
 		dbName = "livepoll"
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	client, err := mongo.Connect(options.Client().ApplyURI(mongoURI))
+	clientOpts := options.Client().ApplyURI(mongoURI)
+
+	// Set custom TLS configuration for cloud deployment (e.g. MongoDB Atlas on Render/Docker)
+	tlsConfig := &tls.Config{
+		InsecureSkipVerify: true,
+	}
+	clientOpts.SetTLSConfig(tlsConfig)
+
+	client, err := mongo.Connect(clientOpts)
 	if err != nil {
 		return nil, fmt.Errorf("failed to configure MongoDB client: %w", err)
 	}

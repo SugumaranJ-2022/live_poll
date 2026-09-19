@@ -2,6 +2,7 @@ package config
 
 import (
 	"context"
+	"crypto/tls"
 	"log"
 	"os"
 	"time"
@@ -26,9 +27,15 @@ func ConnectRedis() *redis.Client {
 		}
 	}
 
+	if opt.TLSConfig != nil {
+		opt.TLSConfig.InsecureSkipVerify = true
+	} else if len(redisURL) > 6 && redisURL[:6] == "rediss" {
+		opt.TLSConfig = &tls.Config{InsecureSkipVerify: true}
+	}
+
 	client := redis.NewClient(opt)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	if err := client.Ping(ctx).Err(); err != nil {
